@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fullscreen Looping Video</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: black;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: #fff;
+    }
+
+    /* Make the video cover the entire viewport */
+    video#bgVideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover; /* crop to fill */
+      z-index: 0;
+      background: black;
+    }
+
+    /* Simple overlay with instructions */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      pointer-events: none; /* let clicks pass through to the video */
+      z-index: 2;
+    }
+
+    .controls {
+      pointer-events: auto; /* enable clicks on the button */
+      margin: 24px;
+      background: rgba(0,0,0,0.45);
+      padding: 10px 14px;
+      border-radius: 10px;
+      backdrop-filter: blur(6px);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    .hint { font-size: 13px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+  <!-- Replace 'video.mp4' with your file path or URL -->
+  <video id="bgVideo" autoplay muted loop playsinline>
+    <source src="video.mp4" type="video/mp4">
+    <!-- Add other encodings for better compatibility -->
+    <!-- <source src="video.webm" type="video/webm"> -->
+    Your browser does not support HTML5 video.
+  </video>
+
+  <div class="overlay">
+    <div class="controls">
+      <button id="fsBtn">Enter Fullscreen</button>
+      <div class="hint">Click the video or press <strong>F</strong> to toggle fullscreen. Video is muted &amp; set to loop for autoplay compatibility.</div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('bgVideo');
+    const fsBtn = document.getElementById('fsBtn');
+
+    // Attempt to play (some browsers require a user gesture to start audio; video is muted so autoplay should work)
+    function tryPlay() {
+      video.play().catch(() => {
+        // If autoplay is blocked, show a play overlay or rely on user clicking.
+        console.log('Autoplay prevented — user interaction required to play.');
+      });
+    }
+
+    // Toggle fullscreen on the <video> element (preferred) or documentElement as fallback
+    async function toggleFullScreen() {
+      try {
+        if (!document.fullscreenElement) {
+          if (video.requestFullscreen) await video.requestFullscreen();
+          else if (video.webkitRequestFullscreen) await video.webkitRequestFullscreen();
+          else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+          fsBtn.textContent = 'Exit Fullscreen';
+        } else {
+          await document.exitFullscreen();
+          fsBtn.textContent = 'Enter Fullscreen';
+        }
+      } catch (err) {
+        console.warn('Fullscreen toggle failed:', err);
+      }
+    }
+
+    // Click on the video toggles play/pause and optionally enters fullscreen on first click
+    let firstClick = true;
+    video.addEventListener('click', async (e) => {
+      // toggle play/pause
+      if (video.paused) video.play(); else video.pause();
+
+      // on first user gesture, try to enter fullscreen (browser may still block fullscreen without explicit button press)
+      if (firstClick) {
+        tryPlay();
+        firstClick = false;
+      }
+    });
+
+    // Button to toggle fullscreen
+    fsBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await toggleFullScreen();
+      // Ensure the video is playing when entering fullscreen
+      tryPlay();
+    });
+
+    // Keyboard shortcut: 'f' to toggle fullscreen, space to toggle play/pause
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullScreen();
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (video.paused) video.play(); else video.pause();
+      }
+    });
+
+    // Try to start playing on load (muted autoplay should work in most browsers)
+    tryPlay();
+  </script>
+</body>
+</html>
